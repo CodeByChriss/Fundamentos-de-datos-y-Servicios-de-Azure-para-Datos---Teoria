@@ -94,11 +94,29 @@ Analytics Engineer.
 ## Ejercicio 5 : Investiga y arma un diagrama de arquitectura de capas (como el de la sección 8) con cada una de estas tecnologías:
 
 - Databricks (no Azure Databricks)
+![Diagrama Databricks](images/01_DiagramaDatabricks.png)
+
 - Microsoft Fabric. Es decir todo enteramente dentro de Fabric
+![Diagrama Fabric](images/02_DiagramaFabric.png)
+
 - AWS
+![Diagrama AWS](images/03_DiagramaAWS.png)
+
 - GCP
+![Diagrama GCP](images/04_DiagramaGCP.png)
+
 - Herramientas Open Source ( el mas importante de todos )
-- ¿Y que pasa con Snowflake , dbt y DuckDB?  ¿En que casos se utilizan? ¿En que capas se pueden incluir o con cuales otras tecnologías se puede combinar? Crear al menos 3 diagramas para este caso
+![Diagrama Open Source](images/05_DiagramaOpenSource.png)
+
+- ¿Y que pasa con Snowflake , dbt y DuckDB?  ¿En que casos se utilizan? ¿En que capas se pueden incluir o con cuales otras tecnologías se puede combinar? Crear al menos 3 diagramas para este caso.<br>
+Este es el estándar actual de la industria. Extraes con una herramienta, guardas en Snowflake y transformas con dbt.<br>
+![Diagrama Snowflake](images/06_DiagramaSnowflake.png)<br>
+
+Ideas para proyectos más ligeros o económicos donde no quieres pagar un Data Warehouse enorme. dbt se conecta a DuckDB para orquestar la lógica SQL de transformación.<br>
+![Diagrama dbt](images/07_DiagramaDBT.png)<br>
+
+Se usa cuando tienes un volumen masivo de datos generados en local (por ejemplo, logs de servidores) y necesitas filtrarlos  antes de subirlos a la nube.<br>
+![Diagrama DuckDB](images/08_DiagramaDuckDB.png)<br>
 
 ## Sección 10: Caso práctico — Plataforma de datos de Grupo Alimenta
 
@@ -138,8 +156,15 @@ Grupo Alimenta quiere tres cosas:
 
 <br>
 
-**2. **Arquitectura.** Dibuja  una arquitectura con capas Bronze, Silver y Gold. Indica qué servicio de Azure usarías en cada paso y justifica si optas por Fabric, Databricks u otro stack**<br>
-
+**2. **Arquitectura.** Dibuja una arquitectura con capas Bronze, Silver y Gold. Indica qué servicio de Azure usarías en cada paso y justifica si optas por Fabric, Databricks u otro stack**<br>
+* Ingesta de datos: Fabric Pipelines (Data Factory integrado). Es el servicio orquestador estrella de Azure y permite conectar de forma sencilla multitud de fuentes y programar los flujos de extracción de datos.
+* Capa Bronze: OneLake (Fabrick Lakehouse). Permite almacenar la ingesta exactamente como llega desde las fuentes originales, admitiendo todo tipo de formatos.
+* Capa Silver:  Fabric Spark Notebooks. Para transformar, limpiar datos y aplicar esquemas, Spark es el motor de procesamiento más potente y es el estándar. En esta etapa, Spark convierte los datos crudos y los guarda en formato Parquet en OneLake, preparándolos para futuras consultas.
+* Capa Gold: Fabric Data Warehouse. Una vez que los datos están limpios en la capa Silver, el Data Warehouse es el servicio ideal para estructurarlos en modelos dimensionales (fact y dim) y realizar las agregaciones necesarias.
+* Capa de consumo: Power BI. Es una de las ventajas de fabric, al usar Direct Lake permite que Power BI consulte los datos (Delta Parquet) directamente, a una alta velocidad, eliminando la necesidad de importar, copiar o mover los datos a otro sitio.
+* Gobernanza: Azure Purview y Entra ID. Indispensable para gobernar toda la plataforma. Gestiona quién tiene acceso a qué, supervisa el linaje de los datos y asegura el cumplimiento normativo en todas las capas.
+Como se puede observar, en casi todos los apartados se usa Fabric ya que está pensada para ser usada de forma sencilla (comparado con el resto de opciones) y ofrece ciertas ventajas. Todo esto, a un coste mucho más elevado que el resto de alternativas.
+![Diagrama Capas](images/09_DiagramaCapas.png)
 
 **3. **Formatos.** Indica el formato de almacenamiento de cada capa y por qué.**<br>
 * **Bronze:**
@@ -151,7 +176,16 @@ Grupo Alimenta quiere tres cosas:
   Delta Lake / Parquet. Permite la conexión mediante **Direct Lake** desde Power BI, proporcionando el rendimiento de la memoria RAM (In-Memory) directamente sobre el Data Lake sin necesidad de duplicar ni importar los datos.
 
 **4. **Modelo Gold.** Diseña el esquema en estrella de ventas: tabla de hechos, granularidad, medidas y al menos cuatro dimensiones.**<br>
-
+**Granularidad**: Línea de ticket de caja (cada producto individual dentro de una compra física u online). Esta es la base recomendada porque permite el máximo nivel de detalle.
+<br>
+**Tabla de hechos (Fact_Ventas)**:Claves Foráneas (FK): id_fecha, id_tienda, id_producto, id_socio, id_promocion.   Medidas (Métricas numéricas): cantidad_vendida, importe_venta (extraído de los tickets), descuento_aplicado, y margen.
+<br>
+**Tablas dim:**
+1. Dim_Producto: id_producto, nombre_producto, familia.
+2. Dim_Tienda: id_tienda, ciudad, superficie_m2, formato.
+3. Dim_Socio: id_socio, nombre, y atributos extraídos de la app como preferencias (ej. ecológico, sin gluten) y consentimiento_marketing.
+4. Dim_Fecha: id_fecha, dia, mes, año, trimestre, estacion.
+5. Dim_Promocion: id_promocion, codigo_cupon (ej. FRUTA10), tipo_descuento.
 
 **5. **Roles.** Asigna cada paso de la arquitectura a uno de los siete roles vistos, incluyendo arquitecto de datos, analytics engineer y científico de datos.**<br>
 1. Definición de Arquitectura y Topología: Arquitecto de Datos (Data Architect).
